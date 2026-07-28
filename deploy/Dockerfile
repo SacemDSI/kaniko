@@ -101,15 +101,18 @@ RUN ["/bin/busybox", "mv", "/tmp/executor", "/kaniko/executor"]
 
 ENTRYPOINT ["/kaniko/executor"]
 
-FROM kaniko-executor AS kaniko-debug
+FROM kaniko-base AS kaniko-debug
 
 ENV PATH=/usr/local/bin:/kaniko:/bin
 
+COPY --from=builder /src/out/executor /kaniko/executor
 COPY --from=builder /src/out/warmer /kaniko/warmer
 
 COPY --from=busybox /bin/busybox /bin/busybox
 
 RUN ["/bin/busybox", "ln", "-sf", "/bin/busybox", "/bin/sh"]
+
+ENTRYPOINT ["/kaniko/executor"]
 
 FROM kaniko-base-slim AS kaniko-slim
 
