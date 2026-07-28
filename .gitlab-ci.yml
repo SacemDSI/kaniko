@@ -9,6 +9,8 @@ include:
       docker_build_image: "artifactory.prusilo.interne.cloud.sacem.fr/oci/executor:v0.0.1-debug"
 
 default:
+  variables:
+    KANIKO_VERSION: v1.25.16
   tags:
     - onprem
 
@@ -21,12 +23,24 @@ stages:
 .image-matrix: &image-matrix
   - VARIANT: warmer
     TARGET: kaniko-warmer
+    IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/warmer
+    PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/warmer
+    IMAGE_TAG: "$KANIKO_VERSION"
   - VARIANT: executor
     TARGET: kaniko-executor
+    IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/executor
+    PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor
+    IMAGE_TAG: "$KANIKO_VERSION"
   - VARIANT: debug
     TARGET: kaniko-debug
+    IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/executor
+    PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor
+    IMAGE_TAG: "${KANIKO_VERSION}-debug"
   - VARIANT: slim
     TARGET: kaniko-slim
+    IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/executor
+    PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor
+    IMAGE_TAG: "${KANIKO_VERSION}-slim"
 
 lint-dockerfile:
   extends: .docker-hadolint
@@ -37,14 +51,14 @@ check-snapshot:
   parallel:
     matrix: *image-matrix
   variables:
-    DOCKER_BUILD_IMAGE_SNAPSHOT: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:${VARIANT}-latest"
+    DOCKER_BUILD_IMAGE_SNAPSHOT: "${IMAGE_REPO}:${IMAGE_TAG}"
 
 build-image:
   extends: .docker-build
   parallel:
     matrix: *image-matrix
   variables:
-    DOCKER_BUILD_IMAGE_SNAPSHOT: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:${VARIANT}-latest"
+    DOCKER_BUILD_IMAGE_SNAPSHOT: "${IMAGE_REPO}:${IMAGE_TAG}"
     DOCKER_BUILD_OPTIONS: "--target=${TARGET} --compressed-caching=false --snapshot-mode=redo"
   needs:
     - job: check-snapshot
@@ -57,8 +71,8 @@ publish-image:
   parallel:
     matrix: *image-matrix
   variables:
-    DOCKER_SRC_IMAGE: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:${VARIANT}-latest"
-    DOCKER_DEST_IMAGE: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:${VARIANT}-latest"
+    DOCKER_SRC_IMAGE: "${IMAGE_REPO}:${IMAGE_TAG}"
+    DOCKER_DEST_IMAGE: "${PUBLISH_REPO}:${IMAGE_TAG}"
   needs:
     - job: build-image
       parallel:
