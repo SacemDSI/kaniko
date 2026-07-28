@@ -77,6 +77,10 @@ COPY --from=builder --chown=0:0 /usr/local/bin/docker-credential-acr-env /kaniko
 
 COPY --from=builder /kaniko/.docker /kaniko/.docker
 
+# Provide a static busybox binary in the kaniko base so derived stages
+# can use it for simple file operations (mv, ln, etc.).
+COPY --from=busybox /bin/busybox /bin/busybox
+
 ENV DOCKER_CONFIG=/kaniko/.docker/
 ENV DOCKER_CREDENTIAL_GCR_CONFIG=/kaniko/.config/gcloud/docker_credential_gcr_config.json
 WORKDIR /workspace
@@ -86,14 +90,14 @@ WORKDIR /workspace
 FROM kaniko-base AS kaniko-warmer
 
 COPY --from=builder /src/out/warmer /tmp/warmer
-RUN ["/busybox/mv", "/tmp/warmer", "/kaniko/warmer"]
+RUN ["/bin/busybox", "mv", "/tmp/warmer", "/kaniko/warmer"]
 
 ENTRYPOINT ["/kaniko/warmer"]
 
 FROM kaniko-base AS kaniko-executor
 
 COPY --from=builder /src/out/executor /tmp/executor
-RUN ["/busybox/mv", "/tmp/executor", "/kaniko/executor"]
+RUN ["/bin/busybox", "mv", "/tmp/executor", "/kaniko/executor"]
 
 ENTRYPOINT ["/kaniko/executor"]
 
