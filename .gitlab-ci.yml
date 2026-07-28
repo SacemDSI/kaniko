@@ -94,6 +94,9 @@ verify-image-contents:
         SKOPEO_AUTH_ARGS=""
       fi
       SRC="docker://${DOCKER_BUILD_IMAGE_SNAPSHOT}"
+      echo "Inspecting remote image before copy: $SRC"
+      skopeo inspect $SKOPEO_AUTH_ARGS "$SRC" || true
+      skopeo inspect --raw $SKOPEO_AUTH_ARGS "$SRC" | grep -E '"digest"|"mediaType"|"architecture"|"os"' | head -n 30 || true
       mkdir -p verify
       skopeo copy $SKOPEO_AUTH_ARGS "$SRC" oci:verify
       if [ ! -d verify/blobs/sha256 ]; then
