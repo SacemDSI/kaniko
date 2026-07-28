@@ -1,8 +1,8 @@
 include:
   - component: $CI_SERVER_FQDN/dsi/plateforme/usine-logicielle/usilo-ci-cd-catalog/docker/gitlab-ci-docker@v1.1.4
     inputs:
-      docker_build_context: "${CI_PROJECT_DIR}/deploy/"
-      dockerfile: "Dockerfile"
+      docker_build_context: "${CI_PROJECT_DIR}/"
+      dockerfile: "deploy/Dockerfile"
       docker_registry_host: "artifactory.prusilo.interne.cloud.sacem.fr"
       docker_registry_username: "$USILO_USILO_ARTEFACT_REPOSITORY_USERNAME"
       docker_registry_password: "$USILO_USILO_ARTEFACT_REPOSITORY_PASSWORD"
