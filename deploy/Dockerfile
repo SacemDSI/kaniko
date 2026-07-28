@@ -40,14 +40,10 @@ COPY . .
 #
 # Then submit a PR with the changes to `go.mod`, `go.sum`, and `vendor`.
 
-# Get GCR credential helper
-RUN go install github.com/GoogleCloudPlatform/docker-credential-gcr/v2@v2.1.32
-
-# Get Amazon ECR credential helper
-RUN go install github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login@v0.12.0
-
-# Get ACR docker env credential helper
-RUN go install github.com/chrismellard/docker-credential-acr-env@v0.0.0-20230304212654-82a0ddb27589
+# Get credential helpers
+RUN go install github.com/GoogleCloudPlatform/docker-credential-gcr/v2@v2.1.32 && \
+    go install github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login@v0.12.0 && \
+    go install github.com/chrismellard/docker-credential-acr-env@v0.0.0-20230304212654-82a0ddb27589
 
 RUN \
   --mount=type=cache,target=/root/.cache/go-build \
@@ -56,7 +52,7 @@ RUN \
 
 # Generate latest ca-certificates
 FROM debian:bookworm-slim@sha256:60eac759739651111db372c07be67863818726f754804b8707c90979bda511df AS certs
-RUN apt-get update && apt-get install -y ca-certificates=20230311+deb12u1
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates=20230311+deb12u1
 
 # use musl busybox since it's staticly compiled on all platforms
 FROM busybox:musl@sha256:8635836765b0c4c43970660219739baa58b0883c2e429e4b8918f7dd1519455c AS busybox
