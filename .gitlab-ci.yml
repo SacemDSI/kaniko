@@ -22,6 +22,7 @@ stages:
   - lint
   - check
   - build
+  - verify
   - publish
 
 .image-matrix: &image-matrix
@@ -69,6 +70,20 @@ build-image:
       parallel:
         matrix: *image-matrix
       artifacts: true
+
+# Debug/inspection job moved from .gitlab-ci.debug.yml
+# Builds only the 'builder' stage and pushes a temporary image for inspection.
+inspect-builder-stage:
+  extends: .docker-build
+  stage: verify
+  parallel:
+    matrix: *image-matrix
+  variables:
+    DOCKER_BUILD_OPTIONS: "--target=builder --compressed-caching=false --snapshot-mode=redo"
+    DOCKER_BUILD_IMAGE_SNAPSHOT: "${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/executor-debug-builder-test:${CI_PIPELINE_ID:-manual}"
+  script:
+    - echo "This job builds the 'builder' stage and pushes a temporary image for inspection - ${DOCKER_BUILD_IMAGE_SNAPSHOT}"
+  when: manual
 
 publish-image:
   extends: .skopeo-copy
