@@ -96,7 +96,7 @@ verify-sandbox-image:
         matrix: *image-matrix
       artifacts: true
   script:
-    - echo "Verifying sandbox image: ${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
+    - echo "Verifying sandbox image - ${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
     - docker pull "${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
     - docker run --rm --entrypoint ls "${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}" -la /kaniko || true
     - |
