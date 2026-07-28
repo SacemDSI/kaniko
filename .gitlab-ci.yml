@@ -25,22 +25,26 @@ stages:
     TARGET: kaniko-warmer
     IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/warmer
     PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/warmer
-    IMAGE_TAG: "$KANIKO_VERSION"
+    IMAGE_TAG: "${KANIKO_VERSION}-sandbox"
+    PUBLISH_TAG: "$KANIKO_VERSION"
   - VARIANT: executor
     TARGET: kaniko-executor
     IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/executor
     PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor
-    IMAGE_TAG: "$KANIKO_VERSION"
+    IMAGE_TAG: "${KANIKO_VERSION}-sandbox"
+    PUBLISH_TAG: "$KANIKO_VERSION"
   - VARIANT: debug
     TARGET: kaniko-debug
     IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/executor
     PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor
-    IMAGE_TAG: "${KANIKO_VERSION}-debug"
+    IMAGE_TAG: "${KANIKO_VERSION}-debug-sandbox"
+    PUBLISH_TAG: "${KANIKO_VERSION}-debug"
   - VARIANT: slim
     TARGET: kaniko-slim
     IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/executor
     PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor
-    IMAGE_TAG: "${KANIKO_VERSION}-slim"
+    IMAGE_TAG: "${KANIKO_VERSION}-slim-sandbox"
+    PUBLISH_TAG: "${KANIKO_VERSION}-slim"
 
 lint-dockerfile:
   extends: .docker-hadolint
@@ -72,7 +76,7 @@ publish-image:
     matrix: *image-matrix
   variables:
     DOCKER_SRC_IMAGE: "${IMAGE_REPO}:${IMAGE_TAG}"
-    DOCKER_DEST_IMAGE: "${PUBLISH_REPO}:${IMAGE_TAG}"
+    DOCKER_DEST_IMAGE: "${PUBLISH_REPO}:${PUBLISH_TAG}"
   needs:
     - job: build-image
       parallel:
