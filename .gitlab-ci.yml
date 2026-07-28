@@ -52,6 +52,7 @@ lint-dockerfile:
   allow_failure: true
 
 check-snapshot:
+  name: "check-snapshot:${VARIANT}"
   extends: .skopeo-inspect
   parallel:
     matrix: *image-matrix
@@ -59,6 +60,7 @@ check-snapshot:
     DOCKER_BUILD_IMAGE_SNAPSHOT: "${IMAGE_REPO}:${IMAGE_TAG}"
 
 build-image:
+  name: "build-image:${VARIANT}"
   extends: .docker-build
   parallel:
     matrix: *image-matrix
@@ -72,6 +74,7 @@ build-image:
       artifacts: true
 
 publish-image:
+  name: "publish-image:${VARIANT}"
   extends: .skopeo-copy
   parallel:
     matrix: *image-matrix
