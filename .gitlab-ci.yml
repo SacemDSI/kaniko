@@ -96,9 +96,16 @@ verify-image-contents:
       SRC="docker://${DOCKER_BUILD_IMAGE_SNAPSHOT}"
       mkdir -p verify
       skopeo copy $SKOPEO_AUTH_ARGS "$SRC" oci:verify
-      MANIFEST_FILE=verify/manifest.json
-      if [ ! -f "$MANIFEST_FILE" ]; then
-        echo "manifest.json not found"
+      INDEX_FILE=verify/index.json
+      if [ ! -f "$INDEX_FILE" ]; then
+        echo "index.json not found in OCI layout"
+        ls -la verify
+        exit 1
+      fi
+      MANIFEST_DIGESTS=$(jq -r '.manifests[].digest // empty' "$INDEX_FILE")
+      if [ -z "$MANIFEST_DIGESTS" ]; then
+        echo "no manifest digests found in index.json"
+        cat "$INDEX_FILE"
         exit 1
       fi
       WANT_EXECUTOR=0
@@ -122,6 +129,23 @@ verify-image-contents:
           fi
         fi
       done
+      for manifest_digest in $MANIFEST_DIGESTS; do
+        MANIFEST_FILE=verify/blobs/sha256/${manifest_digest#sha256:}
+        if [ -f "$MANIFEST_FILE" ]; then
+          for digest in $(jq -r '.layers[].digest' "$MANIFEST_FILE"); do
+            blob="verify/blobs/sha256/${digest#sha256:}"
+            if [ -f "$blob" ]; then
+              if tar -tf "$blob" 2>/dev/null | grep -qE '(^|/)(kaniko/executor)$'; then
+                found_executor=1
+              fi
+              if tar -tf "$blob" 2>/dev/null | grep -qE '(^|/)(kaniko/warmer)$'; then
+                found_warmer=1
+              fi
+            fi
+          done
+        fi
+      done
+
       if [ "$WANT_EXECUTOR" -eq 1 ] && [ "$found_executor" -ne 1 ]; then
         echo "/kaniko/executor not found in ${DOCKER_BUILD_IMAGE_SNAPSHOT}"
         exit 1
