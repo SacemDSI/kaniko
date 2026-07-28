@@ -9,10 +9,11 @@ include:
       docker_build_image: "artifactory.prusilo.interne.cloud.sacem.fr/oci/executor:v0.0.1-debug"
 
 default:
-  variables:
-    KANIKO_VERSION: v1.25.16
   tags:
     - onprem
+
+variables:
+    KANIKO_VERSION: v1.25.16
 
 stages:
   - lint
