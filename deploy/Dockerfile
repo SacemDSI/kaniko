@@ -95,13 +95,15 @@ WORKDIR /workspace
 
 FROM kaniko-base AS kaniko-warmer
 
-COPY --from=builder /src/out/warmer /kaniko/
+COPY --from=builder /src/out/warmer /tmp/warmer
+RUN mv /tmp/warmer /kaniko/warmer
 
 ENTRYPOINT ["/kaniko/warmer"]
 
 FROM kaniko-base AS kaniko-executor
 
-COPY --from=builder /src/out/executor /kaniko/
+COPY --from=builder /src/out/executor /tmp/executor
+RUN mv /tmp/executor /kaniko/executor
 
 ENTRYPOINT ["/kaniko/executor"]
 
