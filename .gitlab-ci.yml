@@ -102,7 +102,7 @@ verify-image-contents:
         ls -la verify
         exit 1
       fi
-      MANIFEST_DIGESTS=$(jq -r '.manifests[].digest // empty' "$INDEX_FILE")
+      MANIFEST_DIGESTS=$(grep -o '"digest"[[:space:]]*:[[:space:]]*"sha256:[^"]*"' "$INDEX_FILE" | sed -E 's/.*sha256:([^"}]*)"/\1/')
       if [ -z "$MANIFEST_DIGESTS" ]; then
         echo "no manifest digests found in index.json"
         cat "$INDEX_FILE"
@@ -118,22 +118,11 @@ verify-image-contents:
       fi
       found_executor=0
       found_warmer=0
-      for digest in $(jq -r '.layers[].digest' "$MANIFEST_FILE"); do
-        blob="verify/blobs/sha256/${digest#sha256:}"
-        if [ -f "$blob" ]; then
-          if tar -tf "$blob" 2>/dev/null | grep -qE '(^|/)(kaniko/executor)$'; then
-            found_executor=1
-          fi
-          if tar -tf "$blob" 2>/dev/null | grep -qE '(^|/)(kaniko/warmer)$'; then
-            found_warmer=1
-          fi
-        fi
-      done
       for manifest_digest in $MANIFEST_DIGESTS; do
-        MANIFEST_FILE=verify/blobs/sha256/${manifest_digest#sha256:}
+        MANIFEST_FILE=verify/blobs/sha256/${manifest_digest}
         if [ -f "$MANIFEST_FILE" ]; then
-          for digest in $(jq -r '.layers[].digest' "$MANIFEST_FILE"); do
-            blob="verify/blobs/sha256/${digest#sha256:}"
+          for digest in $(grep -o '"digest"[[:space:]]*:[[:space:]]*"sha256:[^"]*"' "$MANIFEST_FILE" | sed -E 's/.*sha256:([^"}]*)"/\1/'); do
+            blob="verify/blobs/sha256/${digest}"
             if [ -f "$blob" ]; then
               if tar -tf "$blob" 2>/dev/null | grep -qE '(^|/)(kaniko/executor)$'; then
                 found_executor=1
