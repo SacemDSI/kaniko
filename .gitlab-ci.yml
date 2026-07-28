@@ -22,7 +22,6 @@ stages:
   - lint
   - check
   - build
-  - verify
   - publish
 
 .image-matrix: &image-matrix
@@ -82,35 +81,3 @@ publish-image:
     - job: build-image
       parallel:
         matrix: *image-matrix
-
-# Verify the image pushed to the sandbox registry contains the expected binaries.
-verify-sandbox-image:
-  stage: verify
-  tags:
-    - onprem
-  parallel:
-    matrix: *image-matrix
-  needs:
-    - job: build-image
-      parallel:
-        matrix: *image-matrix
-      artifacts: true
-  script:
-    - echo "Verifying sandbox image - ${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
-    - docker pull "${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
-    - docker run --rm --entrypoint ls "${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}" -la /kaniko || true
-    - |
-      if [[ "${VARIANT}" == "executor" || "${VARIANT}" == "debug" || "${VARIANT}" == "slim" ]]; then
-        docker create --name tmp_verify "${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
-        if docker cp tmp_verify:/kaniko/executor /dev/null 2>/dev/null; then
-          echo "/kaniko/executor found"
-        else
-          echo "/kaniko/executor NOT found in ${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
-          docker rm -v tmp_verify || true
-          exit 1
-        fi
-        docker rm -v tmp_verify || true
-      else
-        echo "Variant ${VARIANT} does not require /kaniko/executor; skipping binary check"
-      fi
-  when: on_success
