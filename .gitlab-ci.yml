@@ -102,7 +102,7 @@ verify-image-contents:
         ls -la verify
         exit 1
       fi
-      LAYERS=$(tar -tf "$ARCHIVE" | grep -E '/layer.tar$' || true)
+      LAYERS=$(tar -tf "$ARCHIVE" | grep -E 'layer.tar$' || true)
       if [ -z "$LAYERS" ]; then
         echo "no layer tar entries found in archive"
         tar -tf "$ARCHIVE" || true
@@ -122,15 +122,21 @@ verify-image-contents:
         if [ -z "$layer" ]; then
           continue
         fi
-        if tar -xOf "$ARCHIVE" "$layer" | tar -tf - 2>/dev/null | grep -qE '(^|/)(kaniko/executor)$'; then
+        if tar -xOf "$ARCHIVE" "$layer" | tar -tf - 2>/dev/null | grep -q 'kaniko/executor'; then
           found_executor=1
         fi
-        if tar -xOf "$ARCHIVE" "$layer" | tar -tf - 2>/dev/null | grep -qE '(^|/)(kaniko/warmer)$'; then
+        if tar -xOf "$ARCHIVE" "$layer" | tar -tf - 2>/dev/null | grep -q 'kaniko/warmer'; then
           found_warmer=1
         fi
       done <<< "$LAYERS"
 
       if [ "$WANT_EXECUTOR" -eq 1 ] && [ "$found_executor" -ne 1 ]; then
+        echo "searched layers:"
+        echo "$LAYERS"
+        while IFS= read -r layer; do
+          echo "layer=$layer"
+          tar -xOf "$ARCHIVE" "$layer" | tar -tf - 2>/dev/null | grep -E 'kaniko/(executor|warmer)' || true
+        done <<< "$LAYERS"
         echo "/kaniko/executor not found in ${DOCKER_BUILD_IMAGE_SNAPSHOT}"
         exit 1
       fi
