@@ -107,12 +107,12 @@ ENV PATH=/usr/local/bin:/kaniko:/busybox
 
 COPY --from=builder /src/out/warmer /kaniko/warmer
 
-COPY --from=busybox /bin /busybox
+COPY --from=busybox /bin/busybox /busybox/busybox
 # Declare /busybox as a volume to get it automatically in the path to ignore
 VOLUME /busybox
 
-RUN ["/busybox/mkdir", "-p", "/bin"]
-RUN ["/busybox/ln", "-s", "/busybox/sh", "/bin/sh"]
+RUN ["/busybox/busybox", "mkdir", "-p", "/bin"]
+RUN ["/busybox/busybox", "ln", "-s", "/busybox/busybox", "/bin/sh"]
 
 FROM kaniko-base-slim AS kaniko-slim
 
