@@ -109,7 +109,7 @@ COPY --from=builder /src/out/warmer /kaniko/warmer
 
 COPY --from=busybox /bin/busybox /bin/busybox
 
-RUN ["/bin/busybox", "ln", "-s", "/bin/busybox", "/bin/sh"]
+RUN ["/bin/busybox", "ln", "-sf", "/bin/busybox", "/bin/sh"]
 
 FROM kaniko-base-slim AS kaniko-slim
 
