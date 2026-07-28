@@ -13,7 +13,10 @@ default:
     - onprem
 
 variables:
-    KANIKO_VERSION: v1.25.16
+  KANIKO_VERSION: v1.25.16
+  OCI_REGISTRY_HOST: artifactory.prusilo.interne.cloud.sacem.fr
+  OCI_SANDBOX_BASE: dsi-train-plt-usine-logicielle-oci-sandbox
+  OCI_PUBLISH_BASE: dsi-train-plt-usine-logicielle-oci
 
 stages:
   - lint
@@ -24,26 +27,22 @@ stages:
 .image-matrix: &image-matrix
   - VARIANT: warmer
     TARGET: kaniko-warmer
-    IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/warmer
-    PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/warmer
+    IMAGE_REPO_PATH: warmer
     IMAGE_TAG: "${KANIKO_VERSION}-sandbox"
     PUBLISH_TAG: "$KANIKO_VERSION"
   - VARIANT: executor
     TARGET: kaniko-executor
-    IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/executor
-    PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor
+    IMAGE_REPO_PATH: executor
     IMAGE_TAG: "${KANIKO_VERSION}-sandbox"
     PUBLISH_TAG: "$KANIKO_VERSION"
   - VARIANT: debug
     TARGET: kaniko-debug
-    IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/executor
-    PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor
+    IMAGE_REPO_PATH: executor
     IMAGE_TAG: "${KANIKO_VERSION}-debug-sandbox"
     PUBLISH_TAG: "${KANIKO_VERSION}-debug"
   - VARIANT: slim
     TARGET: kaniko-slim
-    IMAGE_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci-sandbox/executor
-    PUBLISH_REPO: artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor
+    IMAGE_REPO_PATH: executor
     IMAGE_TAG: "${KANIKO_VERSION}-slim-sandbox"
     PUBLISH_TAG: "${KANIKO_VERSION}-slim"
 
@@ -52,20 +51,18 @@ lint-dockerfile:
   allow_failure: true
 
 check-snapshot:
-  name: "check-snapshot:${VARIANT}"
   extends: .skopeo-inspect
   parallel:
     matrix: *image-matrix
   variables:
-    DOCKER_BUILD_IMAGE_SNAPSHOT: "${IMAGE_REPO}:${IMAGE_TAG}"
+    DOCKER_BUILD_IMAGE_SNAPSHOT: "${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
 
 build-image:
-  name: "build-image:${VARIANT}"
   extends: .docker-build
   parallel:
     matrix: *image-matrix
   variables:
-    DOCKER_BUILD_IMAGE_SNAPSHOT: "${IMAGE_REPO}:${IMAGE_TAG}"
+    DOCKER_BUILD_IMAGE_SNAPSHOT: "${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
     DOCKER_BUILD_OPTIONS: "--target=${TARGET} --compressed-caching=false --snapshot-mode=redo"
   needs:
     - job: check-snapshot
@@ -74,13 +71,12 @@ build-image:
       artifacts: true
 
 publish-image:
-  name: "publish-image:${VARIANT}"
   extends: .skopeo-copy
   parallel:
     matrix: *image-matrix
   variables:
-    DOCKER_SRC_IMAGE: "${IMAGE_REPO}:${IMAGE_TAG}"
-    DOCKER_DEST_IMAGE: "${PUBLISH_REPO}:${PUBLISH_TAG}"
+    DOCKER_SRC_IMAGE: "${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
+    DOCKER_DEST_IMAGE: "${OCI_REGISTRY_HOST}/${OCI_PUBLISH_BASE}/${IMAGE_REPO_PATH}:${PUBLISH_TAG}"
   needs:
     - job: build-image
       parallel:
