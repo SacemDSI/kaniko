@@ -61,14 +61,8 @@ RUN apt update && apt install -y ca-certificates
 # use musl busybox since it's staticly compiled on all platforms
 FROM busybox:musl@sha256:8635836765b0c4c43970660219739baa58b0883c2e429e4b8918f7dd1519455c AS busybox
 
-####################################################
-### ATTENTION CETTE SECTION DIFFERE DU REPO FORK ###
-####################################################
 FROM busybox AS kaniko-base-slim
 
-####################################################
-### ATTENTION CETTE SECTION DIFFERE DU REPO FORK ###
-####################################################
 # Create kaniko directory with world write permission to allow non root run
 RUN mkdir -p /kaniko && chmod 777 /kaniko
 
