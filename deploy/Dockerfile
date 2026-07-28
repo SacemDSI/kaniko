@@ -56,7 +56,7 @@ RUN \
 
 # Generate latest ca-certificates
 FROM debian:bookworm-slim@sha256:60eac759739651111db372c07be67863818726f754804b8707c90979bda511df AS certs
-RUN apt-get update && apt-get install -y ca-certificates
+RUN apt-get update && apt-get install -y ca-certificates=20230311+deb12u1
 
 # use musl busybox since it's staticly compiled on all platforms
 FROM busybox:musl@sha256:8635836765b0c4c43970660219739baa58b0883c2e429e4b8918f7dd1519455c AS busybox
