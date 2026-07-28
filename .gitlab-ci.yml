@@ -95,17 +95,17 @@ verify-image-contents:
       fi
       SRC="docker://${DOCKER_BUILD_IMAGE_SNAPSHOT}"
       mkdir -p verify
-      skopeo copy $SKOPEO_AUTH_ARGS "$SRC" oci:verify
-      INDEX_FILE=verify/index.json
-      if [ ! -f "$INDEX_FILE" ]; then
-        echo "index.json not found in OCI layout"
+      skopeo copy $SKOPEO_AUTH_ARGS "$SRC" docker-archive:verify/image.tar
+      ARCHIVE=verify/image.tar
+      if [ ! -f "$ARCHIVE" ]; then
+        echo "docker archive not created"
         ls -la verify
         exit 1
       fi
-      MANIFEST_DIGESTS=$(grep -o '"digest"[[:space:]]*:[[:space:]]*"sha256:[^"]*"' "$INDEX_FILE" | sed -E 's/.*sha256:([^"}]*)"/\1/')
-      if [ -z "$MANIFEST_DIGESTS" ]; then
-        echo "no manifest digests found in index.json"
-        cat "$INDEX_FILE"
+      LAYERS=$(tar -tf "$ARCHIVE" | grep -E '/layer.tar$' || true)
+      if [ -z "$LAYERS" ]; then
+        echo "no layer tar entries found in archive"
+        tar -tf "$ARCHIVE" || true
         exit 1
       fi
       WANT_EXECUTOR=0
@@ -118,22 +118,17 @@ verify-image-contents:
       fi
       found_executor=0
       found_warmer=0
-      for manifest_digest in $MANIFEST_DIGESTS; do
-        MANIFEST_FILE=verify/blobs/sha256/${manifest_digest}
-        if [ -f "$MANIFEST_FILE" ]; then
-          for digest in $(grep -o '"digest"[[:space:]]*:[[:space:]]*"sha256:[^"]*"' "$MANIFEST_FILE" | sed -E 's/.*sha256:([^"}]*)"/\1/'); do
-            blob="verify/blobs/sha256/${digest}"
-            if [ -f "$blob" ]; then
-              if tar -tf "$blob" 2>/dev/null | grep -qE '(^|/)(kaniko/executor)$'; then
-                found_executor=1
-              fi
-              if tar -tf "$blob" 2>/dev/null | grep -qE '(^|/)(kaniko/warmer)$'; then
-                found_warmer=1
-              fi
-            fi
-          done
+      while IFS= read -r layer; do
+        if [ -z "$layer" ]; then
+          continue
         fi
-      done
+        if tar -xOf "$ARCHIVE" "$layer" | tar -tf - 2>/dev/null | grep -qE '(^|/)(kaniko/executor)$'; then
+          found_executor=1
+        fi
+        if tar -xOf "$ARCHIVE" "$layer" | tar -tf - 2>/dev/null | grep -qE '(^|/)(kaniko/warmer)$'; then
+          found_warmer=1
+        fi
+      done <<< "$LAYERS"
 
       if [ "$WANT_EXECUTOR" -eq 1 ] && [ "$found_executor" -ne 1 ]; then
         echo "/kaniko/executor not found in ${DOCKER_BUILD_IMAGE_SNAPSHOT}"
