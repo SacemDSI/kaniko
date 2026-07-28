@@ -2,15 +2,11 @@ include:
   - component: $CI_SERVER_FQDN/dsi/plateforme/usine-logicielle/usilo-ci-cd-catalog/docker/gitlab-ci-docker@v1.1.4
     inputs:
       docker_build_context: "${CI_PROJECT_DIR}/"
-      dockerfile: "deploy/Dockerfile"
+      dockerfile: "Dockerfile"
       docker_registry_host: "artifactory.prusilo.interne.cloud.sacem.fr"
       docker_registry_username: "$USILO_USILO_ARTEFACT_REPOSITORY_USERNAME"
       docker_registry_password: "$USILO_USILO_ARTEFACT_REPOSITORY_PASSWORD"
-      docker_build_image_snapshot: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:latest"
-      docker_src_image: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:latest"
-      docker_dest_image: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:latest"
       docker_build_image: "artifactory.prusilo.interne.cloud.sacem.fr/oci/executor:v0.0.1-debug"
-      docker_build_options: "--compressed-caching=false --snapshot-mode=redo"
 
 default:
   tags:
@@ -22,20 +18,48 @@ stages:
   - build
   - publish
 
+.image-matrix: &image-matrix
+  - VARIANT: warmer
+    TARGET: kaniko-warmer
+  - VARIANT: executor
+    TARGET: kaniko-executor
+  - VARIANT: debug
+    TARGET: kaniko-debug
+  - VARIANT: slim
+    TARGET: kaniko-slim
+
 lint-dockerfile:
   extends: .docker-hadolint
   allow_failure: true
 
 check-snapshot:
   extends: .skopeo-inspect
+  parallel:
+    matrix: *image-matrix
+  variables:
+    DOCKER_BUILD_IMAGE_SNAPSHOT: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:${VARIANT}-latest"
 
 build-image:
   extends: .docker-build
+  parallel:
+    matrix: *image-matrix
+  variables:
+    DOCKER_BUILD_IMAGE_SNAPSHOT: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:${VARIANT}-latest"
+    DOCKER_BUILD_OPTIONS: "--target=${TARGET} --compressed-caching=false --snapshot-mode=redo"
   needs:
     - job: check-snapshot
+      parallel:
+        matrix: *image-matrix
       artifacts: true
 
 publish-image:
   extends: .skopeo-copy
+  parallel:
+    matrix: *image-matrix
+  variables:
+    DOCKER_SRC_IMAGE: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:${VARIANT}-latest"
+    DOCKER_DEST_IMAGE: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:${VARIANT}-latest"
   needs:
     - job: build-image
+      parallel:
+        matrix: *image-matrix
