@@ -71,6 +71,59 @@ build-image:
         matrix: *image-matrix
       artifacts: true
 
+verify-image-contents:
+  extends: .skopeo-inspect
+  stage: verify
+  parallel:
+    matrix: *image-matrix
+  needs:
+    - job: build-image
+      parallel:
+        matrix: *image-matrix
+  variables:
+    DOCKER_BUILD_IMAGE_SNAPSHOT: "${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
+  script:
+    - echo "Verifying image content for ${DOCKER_BUILD_IMAGE_SNAPSHOT}"
+    - |
+      SRC="docker://${DOCKER_BUILD_IMAGE_SNAPSHOT}"
+      mkdir -p verify
+      skopeo copy "$SRC" oci:verify
+      MANIFEST_FILE=verify/manifest.json
+      if [ ! -f "$MANIFEST_FILE" ]; then
+        echo "manifest.json not found"
+        exit 1
+      fi
+      WANT_EXECUTOR=0
+      WANT_WARMER=0
+      if [ "${VARIANT}" = "executor" ] || [ "${VARIANT}" = "debug" ] || [ "${VARIANT}" = "slim" ]; then
+        WANT_EXECUTOR=1
+      fi
+      if [ "${VARIANT}" = "warmer" ] || [ "${VARIANT}" = "debug" ]; then
+        WANT_WARMER=1
+      fi
+      found_executor=0
+      found_warmer=0
+      for digest in $(jq -r '.layers[].digest' "$MANIFEST_FILE"); do
+        blob="verify/blobs/sha256/${digest#sha256:}"
+        if [ -f "$blob" ]; then
+          if tar -tf "$blob" 2>/dev/null | grep -qE '(^|/)(kaniko/executor)$'; then
+            found_executor=1
+          fi
+          if tar -tf "$blob" 2>/dev/null | grep -qE '(^|/)(kaniko/warmer)$'; then
+            found_warmer=1
+          fi
+        fi
+      done
+      if [ "$WANT_EXECUTOR" -eq 1 ] && [ "$found_executor" -ne 1 ]; then
+        echo "/kaniko/executor not found in ${DOCKER_BUILD_IMAGE_SNAPSHOT}"
+        exit 1
+      fi
+      if [ "$WANT_WARMER" -eq 1 ] && [ "$found_warmer" -ne 1 ]; then
+        echo "/kaniko/warmer not found in ${DOCKER_BUILD_IMAGE_SNAPSHOT}"
+        exit 1
+      fi
+      echo "verification passed"
+
 # Debug/inspection job moved from .gitlab-ci.debug.yml
 # Builds only the 'builder' stage and pushes a temporary image for inspection.
 inspect-builder-stage:
@@ -81,8 +134,6 @@ inspect-builder-stage:
   variables:
     DOCKER_BUILD_OPTIONS: "--target=builder --compressed-caching=false --snapshot-mode=redo"
     DOCKER_BUILD_IMAGE_SNAPSHOT: "${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/executor-debug-builder-test:${CI_PIPELINE_ID:-manual}"
-  script:
-    - echo "This job builds the 'builder' stage and pushes a temporary image for inspection - ${DOCKER_BUILD_IMAGE_SNAPSHOT}"
   when: manual
 
 publish-image:
@@ -96,3 +147,5 @@ publish-image:
     - job: build-image
       parallel:
         matrix: *image-matrix
+  rules:
+    - when: never
