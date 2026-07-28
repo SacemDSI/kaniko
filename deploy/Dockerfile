@@ -64,8 +64,8 @@ FROM busybox:musl@sha256:8635836765b0c4c43970660219739baa58b0883c2e429e4b8918f7d
 FROM scratch AS kaniko-base-slim
 
 # Create kaniko directory with world write permission to allow non root run
-COPY --from=busybox /bin/busybox /busybox
-RUN ["/busybox", "sh", "-c", "mkdir -p /kaniko && chmod 777 /kaniko"]
+COPY --from=busybox /bin/busybox /bin/busybox
+RUN ["/bin/busybox", "sh", "-c", "mkdir -p /kaniko && chmod 777 /kaniko"]
 
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /kaniko/ssl/certs/
 COPY files/nsswitch.conf /etc/nsswitch.conf
