@@ -12,6 +12,10 @@ include:
       docker_build_image: "artifactory.prusilo.interne.cloud.sacem.fr/oci/executor:v0.0.1-debug"
       docker_build_options: "--compressed-caching=false --snapshot-mode=redo"
 
+default:
+  tags:
+    - onprem
+
 stages:
   - lint
   - check
