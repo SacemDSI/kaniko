@@ -1,0 +1,36 @@
+include:
+  - component: $CI_SERVER_FQDN/dsi/plateforme/usine-logicielle/usilo-ci-cd-catalog/docker/gitlab-ci-docker@v1.1.4
+    inputs:
+      docker_build_context: "${CI_PROJECT_DIR}/deploy/"
+      dockerfile: "Dockerfile"
+      docker_registry_host: "artifactory.prusilo.interne.cloud.sacem.fr"
+      docker_registry_username: "$USILO_USILO_ARTEFACT_REPOSITORY_USERNAME"
+      docker_registry_password: "$USILO_USILO_ARTEFACT_REPOSITORY_PASSWORD"
+      docker_build_image_snapshot: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:latest"
+      docker_src_image: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:latest"
+      docker_dest_image: "artifactory.prusilo.interne.cloud.sacem.fr/dsi-train-plt-usine-logicielle-oci/executor:latest"
+      docker_build_image: "artifactory.prusilo.interne.cloud.sacem.fr/oci/executor:v0.0.1-debug"
+      docker_build_options: "--compressed-caching=false --snapshot-mode=redo"
+
+stages:
+  - lint
+  - check
+  - build
+  - publish
+
+lint-dockerfile:
+  extends: .docker-hadolint
+
+check-snapshot:
+  extends: .skopeo-inspect
+
+build-image:
+  extends: .docker-build
+  needs:
+    - job: check-snapshot
+      artifacts: true
+
+publish-image:
+  extends: .skopeo-copy
+  needs:
+    - job: build-image
