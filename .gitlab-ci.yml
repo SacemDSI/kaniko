@@ -95,17 +95,10 @@ verify-image-contents:
       fi
       SRC="docker://${DOCKER_BUILD_IMAGE_SNAPSHOT}"
       mkdir -p verify
-      skopeo copy $SKOPEO_AUTH_ARGS "$SRC" docker-archive:verify/image.tar
-      ARCHIVE=verify/image.tar
-      if [ ! -f "$ARCHIVE" ]; then
-        echo "docker archive not created"
-        ls -la verify
-        exit 1
-      fi
-      LAYERS=$(tar -tf "$ARCHIVE" | grep -E 'layer.tar$' || true)
-      if [ -z "$LAYERS" ]; then
-        echo "no layer tar entries found in archive"
-        tar -tf "$ARCHIVE" || true
+      skopeo copy $SKOPEO_AUTH_ARGS "$SRC" oci:verify
+      if [ ! -d verify/blobs/sha256 ]; then
+        echo "OCI layout blobs not found"
+        find verify -maxdepth 3 -type f | sort
         exit 1
       fi
       WANT_EXECUTOR=0
@@ -118,25 +111,28 @@ verify-image-contents:
       fi
       found_executor=0
       found_warmer=0
-      while IFS= read -r layer; do
-        if [ -z "$layer" ]; then
+      while IFS= read -r blob; do
+        if [ -z "$blob" ]; then
           continue
         fi
-        if tar -xOf "$ARCHIVE" "$layer" | tar -tf - 2>/dev/null | grep -q 'kaniko/executor'; then
+        if tar -tf "$blob" 2>/dev/null | grep -q 'kaniko/executor'; then
           found_executor=1
         fi
-        if tar -xOf "$ARCHIVE" "$layer" | tar -tf - 2>/dev/null | grep -q 'kaniko/warmer'; then
+        if tar -tf "$blob" 2>/dev/null | grep -q 'kaniko/warmer'; then
           found_warmer=1
         fi
-      done <<< "$LAYERS"
+        if [ "$found_executor" -eq 1 ] && [ "$found_warmer" -eq 1 ]; then
+          break
+        fi
+      done < <(find verify/blobs/sha256 -type f | sort)
 
       if [ "$WANT_EXECUTOR" -eq 1 ] && [ "$found_executor" -ne 1 ]; then
-        echo "searched layers:"
-        echo "$LAYERS"
-        while IFS= read -r layer; do
-          echo "layer=$layer"
-          tar -xOf "$ARCHIVE" "$layer" | tar -tf - 2>/dev/null | grep -E 'kaniko/(executor|warmer)' || true
-        done <<< "$LAYERS"
+        echo "searched blobs:"
+        find verify/blobs/sha256 -type f | sort
+        while IFS= read -r blob; do
+          echo "blob=$blob"
+          tar -tf "$blob" 2>/dev/null | grep -E 'kaniko/(executor|warmer)' || true
+        done < <(find verify/blobs/sha256 -type f | sort)
         echo "/kaniko/executor not found in ${DOCKER_BUILD_IMAGE_SNAPSHOT}"
         exit 1
       fi
