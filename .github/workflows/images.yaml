@@ -42,12 +42,12 @@ jobs:
           # - warmer
 
         include:
-          - image: executor
-            target: kaniko-executor
-            platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
-            image-name: ghcr.io/sacemdsi/kaniko/executor
-            tag: ${{ github.sha }}
-            release-tag: latest
+          # - image: executor
+          #   target: kaniko-executor
+          #   platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+          #   image-name: ghcr.io/sacemdsi/kaniko/executor
+          #   tag: ${{ github.sha }}
+          #   release-tag: latest
 
           - image: executor-debug
             target: kaniko-debug
@@ -56,19 +56,19 @@ jobs:
             tag: ${{ github.sha }}-debug
             release-tag: debug
 
-          - image: executor-slim
-            target: kaniko-slim
-            platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
-            image-name: ghcr.io/sacemdsi/kaniko/executor
-            tag: ${{ github.sha }}-slim
-            release-tag: slim
+          # - image: executor-slim
+          #   target: kaniko-slim
+          #   platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+          #   image-name: ghcr.io/sacemdsi/kaniko/executor
+          #   tag: ${{ github.sha }}-slim
+          #   release-tag: slim
 
-          - image: warmer
-            target: kaniko-warmer
-            platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
-            image-name: ghcr.io/sacemdsi/kaniko/warmer
-            tag: ${{ github.sha }}
-            release-tag: latest
+          # - image: warmer
+          #   target: kaniko-warmer
+          #   platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+          #   image-name: ghcr.io/sacemdsi/kaniko/warmer
+          #   tag: ${{ github.sha }}
+          #   release-tag: latest
 
     steps:
       - name: Harden Runner
