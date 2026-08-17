@@ -26,6 +26,12 @@ jobs:
       packages: write  # Write to GitHub Packages (for pushing images).
 
     runs-on: sacem
+    environment:
+      name: DEV
+    env:
+      ARTIFACTORY_REGISTRY: ${{ secrets.ARTIFACTORY_REGISTRY }}
+      ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
+      ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
     strategy:
       fail-fast: false
       matrix:
@@ -36,12 +42,12 @@ jobs:
           - warmer
 
         include:
-          - image: executor
-            target: kaniko-executor
-            platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
-            image-name: ghcr.io/sacemdsi/kaniko/executor
-            tag: ${{ github.sha }}
-            release-tag: latest
+          # - image: executor
+          #   target: kaniko-executor
+          #   platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+          #   image-name: ghcr.io/sacemdsi/kaniko/executor
+          #   tag: ${{ github.sha }}
+          #   release-tag: latest
 
           - image: executor-debug
             target: kaniko-debug
@@ -50,19 +56,19 @@ jobs:
             tag: ${{ github.sha }}-debug
             release-tag: debug
 
-          - image: executor-slim
-            target: kaniko-slim
-            platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
-            image-name: ghcr.io/sacemdsi/kaniko/executor
-            tag: ${{ github.sha }}-slim
-            release-tag: slim
+          # - image: executor-slim
+          #   target: kaniko-slim
+          #   platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+          #   image-name: ghcr.io/sacemdsi/kaniko/executor
+          #   tag: ${{ github.sha }}-slim
+          #   release-tag: slim
 
-          - image: warmer
-            target: kaniko-warmer
-            platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
-            image-name: ghcr.io/sacemdsi/kaniko/warmer
-            tag: ${{ github.sha }}
-            release-tag: latest
+          # - image: warmer
+          #   target: kaniko-warmer
+          #   platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+          #   image-name: ghcr.io/sacemdsi/kaniko/warmer
+          #   tag: ${{ github.sha }}
+          #   release-tag: latest
 
     steps:
       - name: Harden Runner
@@ -97,22 +103,21 @@ jobs:
           set -euo pipefail
           gh_tag="${{ matrix.image-name }}:${{ matrix.tag }}"
           tags="$gh_tag"
-          if [ -n "${{ secrets.ARTIFACTORY_REGISTRY }}" ]; then
-            # remove the registry prefix from matrix.image-name (text after first slash)
+          if [ -n "$ARTIFACTORY_REGISTRY" ]; then
             name_part="${{ matrix.image-name }}"
             name_after_slash="${name_part#*/}"
-            art_tag="${{ secrets.ARTIFACTORY_REGISTRY }}/$name_after_slash:${{ matrix.tag }}"
+            art_tag="$ARTIFACTORY_REGISTRY/$name_after_slash:${{ matrix.tag }}"
             tags="$tags,$art_tag"
           fi
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
 
       - name: Login to Artifactory (if configured)
-        if: ${{ secrets.ARTIFACTORY_REGISTRY != '' }}
+        if: $ARTIFACTORY_REGISTRY != ''
         uses: docker/login-action@v2
         with:
-          registry: ${{ secrets.ARTIFACTORY_REGISTRY }}
-          username: ${{ secrets.ARTIFACTORY_USERNAME }}
-          password: ${{ secrets.ARTIFACTORY_PASSWORD }}
+          registry: $ARTIFACTORY_REGISTRY
+          username: $ARTIFACTORY_USERNAME
+          password: $ARTIFACTORY_PASSWORD
 ###### FIN AJOUT #######
       - uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         id: build-and-push
