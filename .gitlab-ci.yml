@@ -53,6 +53,7 @@ lint-dockerfile:
 
 check-snapshot:
   extends: .skopeo-inspect
+  stage: check
   parallel:
     matrix: *image-matrix
   variables:
@@ -60,6 +61,7 @@ check-snapshot:
 
 build-image:
   extends: .docker-build
+  stage: build
   parallel:
     matrix: *image-matrix
   variables:
@@ -72,6 +74,7 @@ build-image:
 
 verify-image-contents:
   extends: .skopeo-inspect
+  stage: verify
   parallel:
     matrix: *image-matrix
   needs:
@@ -146,6 +149,7 @@ verify-image-contents:
 
 publish-image:
   extends: .skopeo-copy
+  stage: publish
   parallel:
     matrix: *image-matrix
   variables:
