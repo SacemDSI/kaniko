@@ -112,12 +112,12 @@ jobs:
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
 
       - name: Login to Artifactory (if configured)
-        if: $ARTIFACTORY_REGISTRY != ''
+        if: ${{ env.ARTIFACTORY_REGISTRY != '' }}
         uses: docker/login-action@v2
         with:
-          registry: $ARTIFACTORY_REGISTRY
-          username: $ARTIFACTORY_USERNAME
-          password: $ARTIFACTORY_PASSWORD
+          registry: ${{ env.ARTIFACTORY_REGISTRY }}
+          username: ${{ env.ARTIFACTORY_USERNAME }}
+          password: ${{ env.ARTIFACTORY_PASSWORD }}
 ###### FIN AJOUT #######
       - uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         id: build-and-push
