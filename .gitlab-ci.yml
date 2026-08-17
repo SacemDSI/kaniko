@@ -69,65 +69,9 @@ build-image:
     - job: check-snapshot
       parallel:
         matrix: *image-matrix
-  after_script:
-    - |
-      echo "Post-push verification for ${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
-      if [ -n "$USILO_USILO_ARTEFACT_REPOSITORY_USERNAME" ] && [ -n "$USILO_USILO_ARTEFACT_REPOSITORY_PASSWORD" ]; then
-        AUTH_B64=$(echo -n "$USILO_USILO_ARTEFACT_REPOSITORY_USERNAME:$USILO_USILO_ARTEFACT_REPOSITORY_PASSWORD" | base64 -w 0)
-        echo "{\"auths\": {\"$OCI_REGISTRY_HOST\": {\"auth\": \"$AUTH_B64\"}}}" > /tmp/auth.json
-        SKOPEO_AUTH_ARGS="--authfile /tmp/auth.json"
-      else
-        SKOPEO_AUTH_ARGS=""
-      fi
-      SRC="docker://${OCI_REGISTRY_HOST}/${OCI_SANDBOX_BASE}/${IMAGE_REPO_PATH}:${IMAGE_TAG}"
-      echo "Inspecting pushed image: $SRC"
-      skopeo inspect $SKOPEO_AUTH_ARGS "$SRC" || true
-      mkdir -p verify
-      skopeo copy $SKOPEO_AUTH_ARGS "$SRC" oci:verify || true
-      if [ ! -d verify/blobs/sha256 ]; then
-        echo "OCI layout blobs not found"
-        find verify -maxdepth 3 -type f | sort || true
-        exit 1
-      fi
-      WANT_EXECUTOR=0
-      WANT_WARMER=0
-      if [ "${VARIANT}" = "executor" ] || [ "${VARIANT}" = "debug" ] || [ "${VARIANT}" = "slim" ]; then
-        WANT_EXECUTOR=1
-      fi
-      if [ "${VARIANT}" = "warmer" ] || [ "${VARIANT}" = "debug" ]; then
-        WANT_WARMER=1
-      fi
-      found_executor=0
-      found_warmer=0
-      while IFS= read -r blob; do
-        if [ -z "$blob" ]; then
-          continue
-        fi
-        if tar -tf "$blob" 2>/dev/null | grep -q 'kaniko/executor'; then
-          found_executor=1
-        fi
-        if tar -tf "$blob" 2>/dev/null | grep -q 'kaniko/warmer'; then
-          found_warmer=1
-        fi
-        if [ "$found_executor" -eq 1 ] && [ "$found_warmer" -eq 1 ]; then
-          break
-        fi
-      done < <(find verify/blobs/sha256 -type f | sort)
-
-      if [ "$WANT_EXECUTOR" -eq 1 ] && [ "$found_executor" -ne 1 ]; then
-        echo "/kaniko/executor not found in ${DOCKER_BUILD_IMAGE_SNAPSHOT}"
-        exit 1
-      fi
-      if [ "$WANT_WARMER" -eq 1 ] && [ "$found_warmer" -ne 1 ]; then
-        echo "/kaniko/warmer not found in ${DOCKER_BUILD_IMAGE_SNAPSHOT}"
-        exit 1
-      fi
-      echo "post-push verification passed"
-      artifacts: true
 
 verify-image-contents:
   extends: .skopeo-inspect
-  stage: verify
   parallel:
     matrix: *image-matrix
   needs:
