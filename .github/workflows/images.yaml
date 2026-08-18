@@ -52,7 +52,7 @@ jobs:
           - image: executor-debug
             target: kaniko-debug
             platforms: linux/amd64,linux/arm64,linux/s390x
-            image-name: ghcr.io/sacemdsi/kaniko/executor
+            image-name: executor
             tag: ${{ github.sha }}-debug
             release-tag: debug
 
@@ -101,14 +101,14 @@ jobs:
         id: compute-tags
         run: |
           set -euo pipefail
-          gh_tag="${{ matrix.image-name }}:${{ matrix.tag }}"
-          tags="$gh_tag"
-          if [ -n "$ARTIFACTORY_REGISTRY" ]; then
-            name_part="${{ matrix.image-name }}"
-            name_after_slash="${name_part#*/}"
-            art_tag="$ARTIFACTORY_REGISTRY/$name_after_slash:${{ matrix.tag }}"
-            tags="$tags,$art_tag"
+          if [ -z "$ARTIFACTORY_REGISTRY" ]; then
+            echo "ARTIFACTORY_REGISTRY must be set to push images" >&2
+            exit 1
           fi
+          name_part="${{ matrix.image-name }}"
+          image_path="${name_part#ghcr.io/}"
+          art_tag="$ARTIFACTORY_REGISTRY/$image_path:${{ matrix.tag }}"
+          tags="$art_tag"
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
 
       - name: Login to Artifactory (if configured)
