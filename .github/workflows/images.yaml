@@ -47,28 +47,28 @@ jobs:
           #   target: kaniko-executor
           #   platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
           #   image-name: ghcr.io/sacemdsi/kaniko/executor
-          #   tag: ${{ github.sha }}
+          #   tagSuffix: ""
           #   release-tag: latest
 
           - image: executor-debug
             target: kaniko-debug
             platforms: linux/amd64,linux/arm64,linux/s390x
             image-name: executor
-            tag: ${{ github.sha }}-debug
+            tagSuffix: -debug
             release-tag: debug
 
           # - image: executor-slim
           #   target: kaniko-slim
           #   platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
           #   image-name: ghcr.io/sacemdsi/kaniko/executor
-          #   tag: ${{ github.sha }}-slim
+          #   tagSuffix: -slim
           #   release-tag: slim
 
           # - image: warmer
           #   target: kaniko-warmer
           #   platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
           #   image-name: ghcr.io/sacemdsi/kaniko/warmer
-          #   tag: ${{ github.sha }}
+          #   tagSuffix: ""
           #   release-tag: latest
 
     steps:
@@ -98,6 +98,21 @@ jobs:
 
       - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 ###### AJOUT #######
+      - name: Compute version tag
+        id: version
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            # Released tag (e.g. v1.25.16): use it as-is, no -dev suffix.
+            echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "dev-suffix=" >> "$GITHUB_OUTPUT"
+          else
+            branch="${{ github.head_ref || github.ref_name }}"
+            # Docker tags can't contain '/', so sanitize the branch name.
+            echo "version=${branch//\//-}" >> "$GITHUB_OUTPUT"
+            echo "dev-suffix=-dev" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Compute push tags (GHCR + optional Artifactory)
         id: compute-tags
         run: |
@@ -108,7 +123,8 @@ jobs:
           fi
           name_part="${{ matrix.image-name }}"
           image_path="${name_part#ghcr.io/}"
-          art_tag="$ARTIFACTORY_REGISTRY/$image_path:${{ matrix.tag }}"
+          image_tag="${{ steps.version.outputs.version }}${{ matrix.tagSuffix }}${{ steps.version.outputs.dev-suffix }}"
+          art_tag="$ARTIFACTORY_REGISTRY/$image_path:${image_tag}"
           tags="$art_tag"
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
 
