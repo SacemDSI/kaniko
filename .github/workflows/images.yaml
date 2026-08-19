@@ -42,7 +42,7 @@ jobs:
 
     runs-on: sacem
     environment:
-      name: ${{ github.ref_name == 'main' && 'PRD' || 'DEV' }}
+      name: ${{ (github.ref_name == 'main' || github.ref_type == 'tag') && 'PRD' || 'DEV' }}
     env:
       ARTIFACTORY_REGISTRY: ${{ secrets.ARTIFACTORY_REGISTRY }}
       ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
